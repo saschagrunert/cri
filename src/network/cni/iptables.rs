@@ -428,7 +428,7 @@ impl Chain {
     pub const TOP_LEVEL_DNAT_CHAIN_NAME: &'static str = "CRI-HOSTPORT-DNAT";
 
     /// Fill the DNAT rules for the chain.
-    pub fn fill_dnat_rules(&mut self, port_mappings: &[&PortMapping], network: IpNetwork) {
+    pub fn fill_dnat_rules(&mut self, port_mappings: &[PortMapping], network: IpNetwork) {
         // Generate the dnat entry rules. We'll use multiport, but it ony accepts up to 15 rules,
         // so partition the list if needed.
         let protocol_ports = Self::ports_by_protocol(port_mappings);
@@ -520,7 +520,7 @@ impl Chain {
     }
 
     /// Group port numbers by protocols
-    fn ports_by_protocol<'a>(port_mappings: &'a [&PortMapping]) -> BTreeMap<&'a str, Vec<u16>> {
+    fn ports_by_protocol<'a>(port_mappings: &'a [PortMapping]) -> BTreeMap<&'a str, Vec<u16>> {
         let mut result = BTreeMap::new();
         for port_mapping in port_mappings {
             result
@@ -1112,22 +1112,22 @@ mod tests {
         let mut chain = ChainBuilder::default().name("name").build()?;
         chain.fill_dnat_rules(
             &[
-                &PortMappingBuilder::default()
+                PortMappingBuilder::default()
                     .host("127.0.0.1:8080".parse::<SocketAddr>()?)
                     .container_port(8080u16)
                     .protocol("tcp")
                     .build()?,
-                &PortMappingBuilder::default()
+                PortMappingBuilder::default()
                     .host("127.0.0.1:8081".parse::<SocketAddr>()?)
                     .container_port(8081u16)
                     .protocol("udp")
                     .build()?,
-                &PortMappingBuilder::default()
+                PortMappingBuilder::default()
                     .host("0.0.0.0:30443".parse::<SocketAddr>()?)
                     .container_port(1234u16)
                     .protocol("sctp")
                     .build()?,
-                &PortMappingBuilder::default()
+                PortMappingBuilder::default()
                     .host("[::1]:6000".parse::<SocketAddr>()?)
                     .container_port(6001u16)
                     .protocol("tcp")

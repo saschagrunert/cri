@@ -11,18 +11,18 @@ use anyhow::{format_err, Context, Result};
 use derive_builder::Builder;
 use getset::{CopyGetters, Getters, MutGetters};
 use ipnetwork::IpNetwork;
-use log::trace;
+use log::{error, trace};
 use rtnetlink::IpVersion;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
-    net::{IpAddr, SocketAddr},
+    net::SocketAddr,
     path::Path,
 };
 use sysctl::{Ctl, Sysctl};
 
-#[derive(Getters, MutGetters)]
+#[derive(Clone, Getters, MutGetters)]
 /// The main interface to manage port mappings.
 pub struct PortManager {
     #[getset(get, get_mut)]
@@ -100,7 +100,7 @@ impl PortManager {
         &mut self,
         id: I,
         container_network: IpNetwork,
-        port_mappings: &[&PortMapping],
+        port_mappings: &[PortMapping],
     ) -> Result<()>
     where
         I: AsRef<str>,
@@ -175,7 +175,7 @@ impl PortManager {
             // Set the route_localnet bit on the host interface, so that 127/8 can cross a routing
             // boundary.
             if let Some(interface_name) = self
-                .get_routable_host_interface(container_network.ip())
+                .get_routable_ipv4_host_interface()
                 .await
                 .context("get routable host interface")?
             {
@@ -205,7 +205,7 @@ impl PortManager {
             .await
             .context("setup top level DNAT chain")?;
 
-        let dnat_chain_name = Self::hash(id, &(container_network, &port_mappings));
+        let dnat_chain_name = Self::hash(id, &(container_network, port_mappings));
         let mut dnat_chain = ChainBuilder::default()
             .name(&dnat_chain_name)
             .entry_chains(vec![top_level_dnat_chain.name().into()])
@@ -213,7 +213,7 @@ impl PortManager {
             .context("build DNAT chain")?;
 
         trace!("Filling DNAT rules");
-        dnat_chain.fill_dnat_rules(&port_mappings, container_network);
+        dnat_chain.fill_dnat_rules(port_mappings, container_network);
 
         trace!("Setup DNAT chain");
         self.iptables
@@ -276,14 +276,9 @@ impl PortManager {
 
     /// Tries to determine which interface routes the container's traffic. This is the one on which
     /// we disable martian filtering.
-    async fn get_routable_host_interface(&self, ip: IpAddr) -> Result<Option<String>> {
+    async fn get_routable_ipv4_host_interface(&self) -> Result<Option<String>> {
         trace!("Getting routable host interface");
-        let ip_version = if ip.is_ipv4() {
-            IpVersion::V4
-        } else {
-            IpVersion::V6
-        };
-        let routes = self.netlink().route_get(ip_version).await?;
+        let routes = self.netlink().route_get(IpVersion::V4).await?;
         trace!("Got {} routes", routes.len());
 
         for route in routes {
@@ -308,6 +303,15 @@ impl PortManager {
         ctl.set_value_string("1")
             .map_err(|e| format_err!("set sysctl {}: {}", key, e))?;
         Ok(())
+    }
+}
+
+impl Drop for PortManager {
+    fn drop(&mut self) {
+        trace!("Persisting port manager storage");
+        if let Err(e) = self.storage_mut().persist() {
+            error!("Unable to persist port manager storage: {}", e)
+        }
     }
 }
 
@@ -374,7 +378,7 @@ mod tests {
             .add(
                 "id",
                 IpNetwork::V6("ff01::0".parse()?),
-                &[&PortMappingBuilder::default()
+                &[PortMappingBuilder::default()
                     .host("[::1]:6000".parse::<SocketAddr>()?)
                     .container_port(6001u16)
                     .protocol("tcp")
@@ -397,7 +401,7 @@ mod tests {
             .add(
                 "id",
                 IpNetwork::V4("127.0.0.1".parse()?),
-                &[&PortMappingBuilder::default()
+                &[PortMappingBuilder::default()
                     .host("[::1]:6000".parse::<SocketAddr>()?)
                     .container_port(6001u16)
                     .protocol("tcp")
@@ -408,7 +412,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_routable_host_interface_success_ipv4() -> Result<()> {
+    async fn get_routable_ipv4_host_interface_success() -> Result<()> {
         let port_manager = port_manager(
             Some(vec![RouteMessage {
                 header: RouteHeader::default(),
@@ -416,32 +420,18 @@ mod tests {
             }]),
             Some(LinkBuilder::default().build()?),
         )?;
-        let ip = IpAddr::V4(Ipv4Addr::LOCALHOST);
-        let res = port_manager.get_routable_host_interface(ip).await?;
+        let res = port_manager.get_routable_ipv4_host_interface().await?;
         assert!(res.is_some());
         Ok(())
     }
 
     #[tokio::test]
-    async fn get_routable_host_interface_failure_ipv4_route_get() -> Result<()> {
+    async fn get_routable_ipv4_host_interface_failure_route_get() -> Result<()> {
         let port_manager = port_manager(None, None)?;
-        let ip = IpAddr::V4(Ipv4Addr::LOCALHOST);
-        assert!(port_manager.get_routable_host_interface(ip).await.is_err());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_routable_host_interface_success_ipv6() -> Result<()> {
-        let port_manager = port_manager(
-            Some(vec![RouteMessage {
-                header: RouteHeader::default(),
-                nlas: vec![Nla::Oif(0)],
-            }]),
-            Some(LinkBuilder::default().build()?),
-        )?;
-        let ip = IpAddr::V6(Ipv6Addr::LOCALHOST);
-        let res = port_manager.get_routable_host_interface(ip).await?;
-        assert!(res.is_some());
+        assert!(port_manager
+            .get_routable_ipv4_host_interface()
+            .await
+            .is_err());
         Ok(())
     }
 

@@ -1,0 +1,4 @@
+language = "C"
+pragma_once = true
+line_length = 80
+documentation_style = "doxy"
