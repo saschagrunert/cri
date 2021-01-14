@@ -345,9 +345,9 @@ dependencies = [
 
 [[package]]
 name = "darling"
-version = "0.10.3"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15d658711a12632b5574c8d5b3fc5d2f0d2f87b9fbf9237ee0f759b88bb6bdec"
+checksum = "11947000d710ff98138229f633039982f0fef2d9a3f546c21d610fee5f8631d5"
 dependencies = [
  "darling_core",
  "darling_macro",
@@ -355,9 +355,9 @@ dependencies = [
 
 [[package]]
 name = "darling_core"
-version = "0.10.3"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d3514d243331d8acde56bfcf45d0147aabbda853c2f49dce081ea85f9a7220"
+checksum = "ae53b4d9cc89c40314ccf2bf9e6ff1eb19c31e3434542445a41893dbf041aec2"
 dependencies = [
  "fnv",
  "ident_case",
@@ -369,9 +369,9 @@ dependencies = [
 
 [[package]]
 name = "darling_macro"
-version = "0.10.3"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44f63c369ef0c17ad17585d31d5f2bf10dece2710bf0766e01db57a6f9849a2e"
+checksum = "e9cd9ac4d50d023af5e710cae1501afb063efcd917bd3fc026e8ed6493cc9755"
 dependencies = [
  "darling_core",
  "quote",
@@ -381,7 +381,7 @@ dependencies = [
 [[package]]
 name = "derive_builder"
 version = "0.10.0-alpha"
-source = "git+https://github.com/colin-kiegel/rust-derive-builder#0e5d2663cf01c991d5a3abff04fffff60adff678"
+source = "git+https://github.com/colin-kiegel/rust-derive-builder#ee13c513e97cf61ea4871b3b6233c833fb1aed37"
 dependencies = [
  "derive_builder_core",
  "derive_builder_macro",
@@ -390,10 +390,9 @@ dependencies = [
 [[package]]
 name = "derive_builder_core"
 version = "0.10.0-alpha"
-source = "git+https://github.com/colin-kiegel/rust-derive-builder#0e5d2663cf01c991d5a3abff04fffff60adff678"
+source = "git+https://github.com/colin-kiegel/rust-derive-builder#ee13c513e97cf61ea4871b3b6233c833fb1aed37"
 dependencies = [
  "darling",
- "log",
  "proc-macro2",
  "quote",
  "syn",
@@ -402,7 +401,7 @@ dependencies = [
 [[package]]
 name = "derive_builder_macro"
 version = "0.10.0-alpha"
-source = "git+https://github.com/colin-kiegel/rust-derive-builder#0e5d2663cf01c991d5a3abff04fffff60adff678"
+source = "git+https://github.com/colin-kiegel/rust-derive-builder#ee13c513e97cf61ea4871b3b6233c833fb1aed37"
 dependencies = [
  "derive_builder_core",
  "syn",
